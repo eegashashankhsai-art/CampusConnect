@@ -1,1 +1,981 @@
-from flask import (\n    Flask, render_template, request, redirect,\n    url_for, flash, session, send_from_directory, abort\n)\nimport sqlite3\nimport os\nimport uuid\nfrom datetime import date\nfrom werkzeug.security import generate_password_hash, check_password_hash\nfrom werkzeug.utils import secure_filename\nfrom database import create_tables\n\napp = Flask(__name__)\n\napp.secret_key = os.environ.get("CAMPUSCONNECT_SECRET_KEY") or os.urandom(32)\n\n# --------------------------------\n# UPLOAD SETTINGS\n# --------------------------------\n\nUPLOAD_FOLDER = os.path.join("static", "uploads")\nALLOWED_EXTENSIONS = {'pdf'}\n\napp.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER\napp.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024\n\nos.makedirs(UPLOAD_FOLDER, exist_ok=True)\n\n# Create database tables\ncreate_tables()\n\n\n# --------------------------------\n# CHECK ALLOWED FILE TYPE\n# --------------------------------\n\ndef allowed_file(filename):\n    return (\n        '.' in filename and\n        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS\n    )\n\n\n# --------------------------------\n# DATABASE CONNECTION\n# --------------------------------\n\ndef get_db_connection():\n    conn = sqlite3.connect("database/college.db")\n    conn.row_factory = sqlite3.Row\n    return conn\n\n\n# --------------------------------\n# HOME PAGE\n# --------------------------------\n\n@app.route('/')\ndef home():\n    return render_template('index.html')\n\n\n@app.route('/announcements')\ndef announcements():\n    conn = get_db_connection()\n    announcements = conn.execute("""\n        SELECT id, title, description, category, created_at\n        FROM announcements\n        ORDER BY created_at DESC\n    """).fetchall()\n    conn.close()\n    return render_template(\n        'announcements.html',\n        announcements=announcements\n    )\n\n\n# --------------------------------\n# ADMIN LOGIN\n# --------------------------------\n\n@app.route('/admin/login', methods=['GET', 'POST'])\ndef admin_login():\n    if request.method == 'POST':\n        username = request.form.get('username', '').strip()\n        password = request.form.get('password', '')\n\n        conn = get_db_connection()\n        admin = conn.execute("""\n            SELECT * FROM admins\n            WHERE username = ?\n        """, (username,)).fetchone()\n        conn.close()\n\n        if admin and check_password_hash(admin['password'], password):\n            session['admin_id'] = admin['id']\n            session['admin_username'] = admin['username']\n            flash("Admin login successful!")\n            return redirect(url_for('admin_dashboard'))\n\n        flash("Invalid admin username or password.")\n\n    return render_template('admin_login.html')\n\n\n# --------------------------------\n# ADMIN DASHBOARD\n# --------------------------------\n\n@app.route('/admin/dashboard')\ndef admin_dashboard():\n    if 'admin_id' not in session:\n        return redirect(url_for('admin_login'))\n\n    conn = get_db_connection()\n    announcements = conn.execute("""\n        SELECT id, title, description, category, created_at\n        FROM announcements\n        ORDER BY created_at DESC\n    """).fetchall()\n    conn.close()\n    return render_template(\n        'admin_dashboard.html',\n        announcements=announcements\n    )\n\n\n# --------------------------------\n# PUBLISH ANNOUNCEMENT\n# --------------------------------\n\n@app.route('/admin/add_announcement', methods=['GET', 'POST'])\ndef admin_add_announcement():\n    if 'admin_id' not in session:\n        return redirect(url_for('admin_login'))\n\n    allowed_categories = [\n        'General',\n        'Academic',\n        'Events',\n        'Examinations',\n        'Urgent',\n    ]\n\n    if request.method == 'POST':\n        title = request.form.get('title', '').strip()\n        description = request.form.get('description', '').strip()\n        category = request.form.get('category', '').strip()\n\n        if not title or not description:\n            flash("Please enter an announcement title and description.")\n            return redirect(url_for('admin_add_announcement'))\n\n        if category not in allowed_categories:\n            flash("Please select a valid category.")\n            return redirect(url_for('admin_add_announcement'))\n\n        conn = get_db_connection()\n        try:\n            conn.execute("""\n                INSERT INTO announcements\n                (title, description, category)\n                VALUES (?, ?, ?)\n            """, (title, description, category))\n            conn.commit()\n        finally:\n            conn.close()\n\n        flash("Announcement published successfully!")\n        return redirect(url_for('admin_dashboard'))\n\n    return render_template(\n        'add_announcement.html',\n        categories=allowed_categories\n    )\n\n\n# --------------------------------\n# ADMIN EDIT ANNOUNCEMENT\n# --------------------------------\n\n@app.route(\n    '/admin/edit_announcement/<int:announcement_id>',\n    methods=['GET', 'POST']\n)\ndef admin_edit_announcement(announcement_id):\n    if 'admin_id' not in session:\n        return redirect(url_for('admin_login'))\n\n    conn = get_db_connection()\n    announcement = conn.execute("""\n        SELECT * FROM announcements\n        WHERE id = ?\n    """, (announcement_id,)).fetchone()\n\n    if announcement is None:\n        conn.close()\n        abort(404)\n\n    if request.method == 'POST':\n        title = request.form.get('title', '').strip()\n        description = request.form.get('description', '').strip()\n        category = request.form.get('category', '').strip()\n        allowed_categories = [\n            'General',\n            'Academic',\n            'Events',\n            'Examinations',\n            'Urgent',\n        ]\n\n        if not title or not description or category not in allowed_categories:\n            conn.close()\n            flash("Please enter valid announcement details.")\n            return redirect(url_for(\n                'admin_edit_announcement',\n                announcement_id=announcement_id\n            ))\n\n        conn.execute("""\n            UPDATE announcements\n            SET title = ?, description = ?, category = ?\n            WHERE id = ?\n        """, (title, description, category, announcement_id))\n        conn.commit()\n        conn.close()\n        flash("Announcement updated successfully!")\n        return redirect(url_for('admin_dashboard'))\n\n    conn.close()\n    return render_template(\n        'edit_announcement.html',\n        announcement=announcement\n    )\n\n\n# --------------------------------\n# ADMIN DELETE ANNOUNCEMENT\n# --------------------------------\n\n@app.route(\n    '/admin/delete_announcement/<int:announcement_id>',\n    methods=['POST']\n)\ndef admin_delete_announcement(announcement_id):\n    if 'admin_id' not in session:\n        return redirect(url_for('admin_login'))\n\n    conn = get_db_connection()\n    announcement = conn.execute("""\n        SELECT id FROM announcements\n        WHERE id = ?\n    """, (announcement_id,)).fetchone()\n\n    if announcement is None:\n        conn.close()\n        abort(404)\n\n    conn.execute("""\n        DELETE FROM announcements\n        WHERE id = ?\n    """, (announcement_id,))\n    conn.commit()\n    conn.close()\n    flash("Announcement deleted successfully!")\n    return redirect(url_for('admin_dashboard'))\n\n\n# --------------------------------\n# ADMIN LOGOUT\n# --------------------------------\n\n@app.route('/admin/logout')\ndef admin_logout():\n    session.pop('admin_id', None)\n    session.pop('admin_username', None)\n    flash("Admin logged out successfully!")\n    return redirect(url_for('admin_login'))\n\n\n# --------------------------------\n# FACULTY LOGIN\n# --------------------------------\n\n@app.route('/faculty/login', methods=['GET', 'POST'])\ndef faculty_login():\n    if request.method == 'POST':\n        email = request.form.get('email', '').strip().lower()\n        password = request.form.get('password', '')\n\n        conn = get_db_connection()\n        faculty = conn.execute("""\n            SELECT * FROM faculty\n            WHERE email = ?\n        """, (email,)).fetchone()\n        conn.close()\n\n        if faculty and check_password_hash(faculty['password'], password):\n            session.clear()\n            session['faculty_id'] = faculty['id']\n            session['faculty_name'] = faculty['full_name']\n            flash("Faculty login successful!")\n            return redirect(url_for('faculty_dashboard'))\n\n        flash("Invalid faculty email or password.")\n\n    return render_template('faculty_login.html')\n\n\n# --------------------------------\n# FACULTY DASHBOARD\n# --------------------------------\n\n@app.route('/faculty/dashboard')\ndef faculty_dashboard():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    conn = get_db_connection()\n    total_students = conn.execute(\n        "SELECT COUNT(*) FROM students"\n    ).fetchone()[0]\n    total_exams = conn.execute(\n        "SELECT COUNT(*) FROM exams"\n    ).fetchone()[0]\n    total_materials = conn.execute(\n        "SELECT COUNT(*) FROM study_materials"\n    ).fetchone()[0]\n    total_attendance = conn.execute(\n        "SELECT COUNT(*) FROM attendance"\n    ).fetchone()[0]\n    conn.close()\n    return render_template(\n        'faculty_dashboard.html',\n        total_students=total_students,\n        total_exams=total_exams,\n        total_materials=total_materials,\n        total_attendance=total_attendance\n    )\n\n\n# --------------------------------\n# FACULTY LOGOUT\n# --------------------------------\n\n@app.route('/faculty/logout')\ndef faculty_logout():\n    session.pop('faculty_id', None)\n    session.pop('faculty_name', None)\n    flash("Faculty logged out successfully!")\n    return redirect(url_for('faculty_login'))\n\n\n# --------------------------------\n# STUDENT REGISTRATION\n# --------------------------------\n\n@app.route('/register', methods=['GET', 'POST'])\ndef register():\n\n    if request.method == 'POST':\n\n        full_name = request.form['full_name']\n        student_id = request.form['student_id']\n        email = request.form['email']\n        department = request.form['department']\n        year = request.form['year']\n        password = request.form['password']\n\n        hashed_password = generate_password_hash(password)\n\n        conn = get_db_connection()\n\n        try:\n            conn.execute("""\n                INSERT INTO students\n                (full_name, student_id, email, department, year, password)\n                VALUES (?, ?, ?, ?, ?, ?)\n            """, (\n                full_name, student_id, email,\n                department, year, hashed_password\n            ))\n\n            conn.commit()\n            flash("Registration successful! You can now log in.")\n\n        except sqlite3.IntegrityError:\n            flash("Student ID or email already exists.")\n\n        finally:\n            conn.close()\n\n        return redirect(url_for('register'))\n\n    return render_template('register.html')\n\n\n# --------------------------------\n# STUDENT LOGIN\n# --------------------------------\n\n@app.route('/login', methods=['GET', 'POST'])\ndef login():\n\n    if request.method == 'POST':\n\n        email = request.form['email']\n        password = request.form['password']\n\n        conn = get_db_connection()\n\n        student = conn.execute(\n            "SELECT * FROM students WHERE email = ?",\n            (email,)\n        ).fetchone()\n\n        conn.close()\n\n        if student and check_password_hash(student['password'], password):\n\n            session['student_id'] = student['id']\n            session['student_name'] = student['full_name']\n\n            flash("Login successful!")\n\n            return redirect(url_for('student_dashboard'))\n\n        else:\n            flash("Invalid email or password. Please try again.")\n\n    return render_template('login.html')\n\n\n# --------------------------------\n# STUDENT DASHBOARD\n# --------------------------------\n\n@app.route('/dashboard')\ndef student_dashboard():\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n    student = conn.execute("""\n        SELECT department, year\n        FROM students\n        WHERE id = ?\n    """, (session['student_id'],)).fetchone()\n\n    if student is None:\n        conn.close()\n        session.clear()\n        return redirect(url_for('login'))\n\n    total_attendance = conn.execute("""\n        SELECT COUNT(*)\n        FROM attendance\n        WHERE student_id = ?\n    """, (session['student_id'],)).fetchone()[0]\n    present_attendance = conn.execute("""\n        SELECT COUNT(*)\n        FROM attendance\n        WHERE student_id = ?\n        AND LOWER(status) = 'present'\n    """, (session['student_id'],)).fetchone()[0]\n    attendance_percentage = (\n        round((present_attendance / total_attendance) * 100, 2)\n        if total_attendance else 0\n    )\n\n    upcoming_exams = conn.execute("""\n        SELECT COUNT(*)\n        FROM exams\n        WHERE department = ? AND year = ? AND exam_date >= ?\n    """, (\n        student['department'],\n        student['year'],\n        date.today().isoformat()\n    )).fetchone()[0]\n    total_materials = conn.execute(\n        "SELECT COUNT(*) FROM study_materials"\n    ).fetchone()[0]\n    total_announcements = conn.execute(\n        "SELECT COUNT(*) FROM announcements"\n    ).fetchone()[0]\n    conn.close()\n\n    return render_template(\n        'dashboard.html',\n        attendance_percentage=attendance_percentage,\n        upcoming_exams=upcoming_exams,\n        total_materials=total_materials,\n        total_announcements=total_announcements\n    )\n\n\n# --------------------------------\n# STUDENT PROFILE\n# --------------------------------\n\n@app.route('/profile')\ndef student_profile():\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    student = conn.execute(\n        "SELECT * FROM students WHERE id = ?",\n        (session['student_id'],)\n    ).fetchone()\n\n    conn.close()\n\n    if student is None:\n        session.clear()\n        return redirect(url_for('login'))\n\n    return render_template('profile.html', student=student)\n\n\n# --------------------------------\n# STUDENT ATTENDANCE\n# --------------------------------\n\n@app.route('/attendance')\ndef attendance():\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    records = conn.execute("""\n        SELECT subject, attendance_date, status\n        FROM attendance\n        WHERE student_id = ?\n        ORDER BY attendance_date DESC\n    """, (session['student_id'],)).fetchall()\n\n    conn.close()\n\n    return render_template('attendance.html', records=records)\n\n\n# --------------------------------\n# FACULTY ATTENDANCE PAGE\n# --------------------------------\n\n@app.route('/faculty/attendance')\ndef faculty_attendance():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    conn = get_db_connection()\n\n    students = conn.execute(\n        "SELECT id, full_name, student_id FROM students"\n    ).fetchall()\n\n    conn.close()\n\n    return render_template(\n        'faculty_attendance.html',\n        students=students\n    )\n\n\n# --------------------------------\n# SAVE ATTENDANCE\n# --------------------------------\n\n@app.route('/mark_attendance', methods=['POST'])\ndef mark_attendance():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    student_id = request.form.get('student_id')\n    subject = request.form.get('subject', '').strip()\n    attendance_date = request.form.get('attendance_date')\n    status = request.form.get('status')\n\n    if not student_id or not subject or not attendance_date:\n        flash("Please fill in all attendance details.")\n        return redirect(url_for('faculty_attendance'))\n\n    if status not in ['Present', 'Absent']:\n        flash("Please select a valid attendance status.")\n        return redirect(url_for('faculty_attendance'))\n\n    try:\n        date.fromisoformat(attendance_date)\n        student_id = int(student_id)\n\n    except ValueError:\n        flash("Invalid student ID or attendance date.")\n        return redirect(url_for('faculty_attendance'))\n\n    conn = get_db_connection()\n\n    student = conn.execute(\n        "SELECT id FROM students WHERE id = ?",\n        (student_id,)\n    ).fetchone()\n\n    if student is None:\n        conn.close()\n        flash("Student not found.")\n        return redirect(url_for('faculty_attendance'))\n\n    conn.execute("""\n        INSERT INTO attendance\n        (student_id, subject, attendance_date, status)\n        VALUES (?, ?, ?, ?)\n    """, (student_id, subject, attendance_date, status))\n\n    conn.commit()\n    conn.close()\n\n    flash("Attendance saved successfully!")\n\n    return redirect(url_for('faculty_attendance'))\n\n\n# --------------------------------\n# FACULTY ADD EXAMINATION\n# --------------------------------\n\n@app.route('/add_exam', methods=['GET', 'POST'])\ndef add_exam():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    if request.method == 'POST':\n\n        exam_name = request.form.get('exam_name', '').strip()\n        subject = request.form.get('subject', '').strip()\n        exam_date = request.form.get('exam_date', '')\n        exam_time = request.form.get('exam_time', '')\n        department = request.form.get('department', '').strip()\n        year = request.form.get('year', '')\n\n        if not all([\n            exam_name, subject, exam_date,\n            exam_time, department, year\n        ]):\n\n            flash("Please fill in all examination details.")\n            return redirect(url_for('add_exam'))\n\n        try:\n            date.fromisoformat(exam_date)\n\n        except ValueError:\n            flash("Please enter a valid examination date.")\n            return redirect(url_for('add_exam'))\n\n        conn = get_db_connection()\n\n        conn.execute("""\n            INSERT INTO exams\n            (exam_name, subject, exam_date, exam_time, department, year)\n            VALUES (?, ?, ?, ?, ?, ?)\n        """, (\n            exam_name,\n            subject,\n            exam_date,\n            exam_time,\n            department,\n            year\n        ))\n\n        conn.commit()\n        conn.close()\n\n        flash("Examination added successfully!")\n\n        return redirect(url_for('add_exam'))\n\n    return render_template('add_exam.html')\n\n\n# --------------------------------\n# STUDENT VIEW EXAMINATION TIMETABLE\n# --------------------------------\n\n@app.route('/exams')\ndef view_exams():\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    student = conn.execute("""\n        SELECT department, year\n        FROM students\n        WHERE id = ?\n    """, (session['student_id'],)).fetchone()\n\n    if student is None:\n        conn.close()\n        session.clear()\n        return redirect(url_for('login'))\n\n    exams = conn.execute("""\n        SELECT exam_name, subject, exam_date,\n               exam_time, department, year\n        FROM exams\n        WHERE department = ? AND year = ?\n        ORDER BY exam_date ASC\n    """, (\n        student['department'],\n        student['year']\n    )).fetchall()\n\n    conn.close()\n\n    return render_template('exams.html', exams=exams)\n\n\n# --------------------------------\n# FACULTY ADD EXAMINATION RESULTS\n# --------------------------------\n\n@app.route('/add_result', methods=['GET', 'POST'])\ndef add_result():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    conn = get_db_connection()\n\n    if request.method == 'POST':\n\n        student_id = request.form.get('student_id')\n        subject = request.form.get('subject', '').strip()\n        marks = request.form.get('marks')\n        total_marks = request.form.get('total_marks')\n        grade = request.form.get('grade')\n\n        try:\n            student_id = int(student_id)\n            marks = int(marks)\n            total_marks = int(total_marks)\n\n            if not subject or not grade:\n                raise ValueError\n\n            if total_marks <= 0 or marks < 0 or marks > total_marks:\n                conn.close()\n                flash("Please enter valid marks.")\n                return redirect(url_for('add_result'))\n\n        except (ValueError, TypeError):\n            conn.close()\n            flash("Please enter valid result details.")\n            return redirect(url_for('add_result'))\n\n        student = conn.execute(\n            "SELECT id FROM students WHERE id = ?",\n            (student_id,)\n        ).fetchone()\n\n        if student is None:\n            conn.close()\n            flash("Student not found.")\n            return redirect(url_for('add_result'))\n\n        conn.execute("""\n            INSERT INTO results\n            (student_id, subject, marks, total_marks, grade)\n            VALUES (?, ?, ?, ?, ?)\n        """, (\n            student_id, subject, marks, total_marks, grade\n        ))\n\n        conn.commit()\n        conn.close()\n\n        flash("Student results saved successfully!")\n\n        return redirect(url_for('add_result'))\n\n    students = conn.execute(\n        "SELECT id, full_name, student_id FROM students"\n    ).fetchall()\n\n    conn.close()\n\n    return render_template('add_result.html', students=students)\n\n\n# --------------------------------\n# STUDENT VIEW EXAMINATION RESULTS\n# --------------------------------\n\n@app.route('/results')\ndef view_results():\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    results = conn.execute("""\n        SELECT subject, marks, total_marks, grade\n        FROM results\n        WHERE student_id = ?\n    """, (session['student_id'],)).fetchall()\n\n    conn.close()\n\n    return render_template('results.html', results=results)\n\n\n# --------------------------------\n# FACULTY UPLOAD STUDY MATERIALS\n# --------------------------------\n\n@app.route('/upload_material', methods=['GET', 'POST'])\ndef upload_material():\n    if 'faculty_id' not in session:\n        return redirect(url_for('faculty_login'))\n\n    if request.method == 'POST':\n\n        title = request.form.get('title', '').strip()\n        subject = request.form.get('subject', '').strip()\n        description = request.form.get('description', '').strip()\n\n        file = request.files.get('material')\n\n        if not title or not subject or file is None:\n            flash("Please fill in all required details.")\n            return redirect(url_for('upload_material'))\n\n        if file.filename == '':\n            flash("Please select a PDF file.")\n            return redirect(url_for('upload_material'))\n\n        if not allowed_file(file.filename):\n            flash("Only PDF files are allowed.")\n            return redirect(url_for('upload_material'))\n\n        original_filename = secure_filename(file.filename)\n\n        if not original_filename:\n            flash("Invalid file name.")\n            return redirect(url_for('upload_material'))\n\n        # Generate a unique filename\n        unique_filename = str(uuid.uuid4()) + "_" + original_filename\n\n        file_path = os.path.join(\n            app.config['UPLOAD_FOLDER'],\n            unique_filename\n        )\n\n        file.save(file_path)\n\n        conn = get_db_connection()\n\n        try:\n            conn.execute("""\n                INSERT INTO study_materials\n                (title, subject, description, filename)\n                VALUES (?, ?, ?, ?)\n            """, (\n                title,\n                subject,\n                description,\n                unique_filename\n            ))\n\n            conn.commit()\n\n        except sqlite3.Error:\n            conn.rollback()\n\n            if os.path.exists(file_path):\n                os.remove(file_path)\n\n            flash("Unable to save study material. Please try again.")\n\n        else:\n            flash("Study material uploaded successfully!")\n\n        finally:\n            conn.close()\n\n        return redirect(url_for('upload_material'))\n\n    return render_template('upload_material.html')\n\n\n# --------------------------------\n# STUDENT VIEW STUDY MATERIALS\n# --------------------------------\n\n@app.route('/study_materials')\ndef view_study_materials():\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    materials = conn.execute("""\n        SELECT id, title, subject, description, filename\n        FROM study_materials\n        ORDER BY uploaded_at DESC\n    """).fetchall()\n\n    conn.close()\n\n    return render_template(\n        'study_materials.html',\n        materials=materials\n    )\n\n\n# --------------------------------\n# STUDENT DOWNLOAD STUDY MATERIALS\n# --------------------------------\n\n@app.route('/download_material/<int:material_id>')\ndef download_material(material_id):\n\n    if 'student_id' not in session:\n        return redirect(url_for('login'))\n\n    conn = get_db_connection()\n\n    material = conn.execute(\n        "SELECT filename FROM study_materials WHERE id = ?",\n        (material_id,)\n    ).fetchone()\n\n    conn.close()\n\n    if material is None:\n        abort(404)\n\n    return send_from_directory(\n        app.config['UPLOAD_FOLDER'],\n        material['filename'],\n        as_attachment=True\n    )\n\n\n# --------------------------------\n# STUDENT LOGOUT\n# --------------------------------\n\n@app.route('/logout')\ndef logout():\n\n    session.clear()\n\n    flash("You have logged out successfully.")\n\n    return redirect(url_for('login'))\n\n\n# --------------------------------\n# FILE SIZE ERROR\n# --------------------------------\n\n@app.errorhandler(413)\ndef file_too_large(error):\n    flash("File is too large. Maximum allowed size is 10 MB.")\n    return redirect(url_for('upload_material'))\n\n\n# --------------------------------\n# RUN APPLICATION\n# --------------------------------\n\nif __name__ == '__main__':\n    app.run(debug=True)\n
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, session, send_from_directory, abort
+)
+import sqlite3
+import os
+import uuid
+from datetime import date
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from database import create_tables
+
+app = Flask(__name__)
+
+app.secret_key = os.environ.get("CAMPUSCONNECT_SECRET_KEY") or os.urandom(32)
+
+# --------------------------------
+# UPLOAD SETTINGS
+# --------------------------------
+
+UPLOAD_FOLDER = os.path.join("static", "uploads")
+ALLOWED_EXTENSIONS = {'pdf'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Create database tables
+create_tables()
+
+
+# --------------------------------
+# CHECK ALLOWED FILE TYPE
+# --------------------------------
+
+def allowed_file(filename):
+    return (
+        '.' in filename and
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
+
+
+# --------------------------------
+# DATABASE CONNECTION
+# --------------------------------
+
+def get_db_connection():
+    conn = sqlite3.connect("database/college.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# --------------------------------
+# HOME PAGE
+# --------------------------------
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+
+@app.route('/announcements')
+def announcements():
+    conn = get_db_connection()
+    announcements = conn.execute("""
+        SELECT id, title, description, category, created_at
+        FROM announcements
+        ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+    return render_template(
+        'announcements.html',
+        announcements=announcements
+    )
+
+
+# --------------------------------
+# ADMIN LOGIN
+# --------------------------------
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        conn = get_db_connection()
+        admin = conn.execute("""
+            SELECT * FROM admins
+            WHERE username = ?
+        """, (username,)).fetchone()
+        conn.close()
+
+        if admin and check_password_hash(admin['password'], password):
+            session['admin_id'] = admin['id']
+            session['admin_username'] = admin['username']
+            flash("Admin login successful!")
+            return redirect(url_for('admin_dashboard'))
+
+        flash("Invalid admin username or password.")
+
+    return render_template('admin_login.html')
+
+
+# --------------------------------
+# ADMIN DASHBOARD
+# --------------------------------
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    announcements = conn.execute("""
+        SELECT id, title, description, category, created_at
+        FROM announcements
+        ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+    return render_template(
+        'admin_dashboard.html',
+        announcements=announcements
+    )
+
+
+# --------------------------------
+# PUBLISH ANNOUNCEMENT
+# --------------------------------
+
+@app.route('/admin/add_announcement', methods=['GET', 'POST'])
+def admin_add_announcement():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+
+    allowed_categories = [
+        'General',
+        'Academic',
+        'Events',
+        'Examinations',
+        'Urgent',
+    ]
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+
+        if not title or not description:
+            flash("Please enter an announcement title and description.")
+            return redirect(url_for('admin_add_announcement'))
+
+        if category not in allowed_categories:
+            flash("Please select a valid category.")
+            return redirect(url_for('admin_add_announcement'))
+
+        conn = get_db_connection()
+        try:
+            conn.execute("""
+                INSERT INTO announcements
+                (title, description, category)
+                VALUES (?, ?, ?)
+            """, (title, description, category))
+            conn.commit()
+        finally:
+            conn.close()
+
+        flash("Announcement published successfully!")
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template(
+        'add_announcement.html',
+        categories=allowed_categories
+    )
+
+
+# --------------------------------
+# ADMIN EDIT ANNOUNCEMENT
+# --------------------------------
+
+@app.route(
+    '/admin/edit_announcement/<int:announcement_id>',
+    methods=['GET', 'POST']
+)
+def admin_edit_announcement(announcement_id):
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    announcement = conn.execute("""
+        SELECT * FROM announcements
+        WHERE id = ?
+    """, (announcement_id,)).fetchone()
+
+    if announcement is None:
+        conn.close()
+        abort(404)
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        category = request.form.get('category', '').strip()
+        allowed_categories = [
+            'General',
+            'Academic',
+            'Events',
+            'Examinations',
+            'Urgent',
+        ]
+
+        if not title or not description or category not in allowed_categories:
+            conn.close()
+            flash("Please enter valid announcement details.")
+            return redirect(url_for(
+                'admin_edit_announcement',
+                announcement_id=announcement_id
+            ))
+
+        conn.execute("""
+            UPDATE announcements
+            SET title = ?, description = ?, category = ?
+            WHERE id = ?
+        """, (title, description, category, announcement_id))
+        conn.commit()
+        conn.close()
+        flash("Announcement updated successfully!")
+        return redirect(url_for('admin_dashboard'))
+
+    conn.close()
+    return render_template(
+        'edit_announcement.html',
+        announcement=announcement
+    )
+
+
+# --------------------------------
+# ADMIN DELETE ANNOUNCEMENT
+# --------------------------------
+
+@app.route(
+    '/admin/delete_announcement/<int:announcement_id>',
+    methods=['POST']
+)
+def admin_delete_announcement(announcement_id):
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    announcement = conn.execute("""
+        SELECT id FROM announcements
+        WHERE id = ?
+    """, (announcement_id,)).fetchone()
+
+    if announcement is None:
+        conn.close()
+        abort(404)
+
+    conn.execute("""
+        DELETE FROM announcements
+        WHERE id = ?
+    """, (announcement_id,))
+    conn.commit()
+    conn.close()
+    flash("Announcement deleted successfully!")
+    return redirect(url_for('admin_dashboard'))
+
+
+# --------------------------------
+# ADMIN LOGOUT
+# --------------------------------
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_id', None)
+    session.pop('admin_username', None)
+    flash("Admin logged out successfully!")
+    return redirect(url_for('admin_login'))
+
+
+# --------------------------------
+# FACULTY LOGIN
+# --------------------------------
+
+@app.route('/faculty/login', methods=['GET', 'POST'])
+def faculty_login():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+
+        conn = get_db_connection()
+        faculty = conn.execute("""
+            SELECT * FROM faculty
+            WHERE email = ?
+        """, (email,)).fetchone()
+        conn.close()
+
+        if faculty and check_password_hash(faculty['password'], password):
+            session.clear()
+            session['faculty_id'] = faculty['id']
+            session['faculty_name'] = faculty['full_name']
+            flash("Faculty login successful!")
+            return redirect(url_for('faculty_dashboard'))
+
+        flash("Invalid faculty email or password.")
+
+    return render_template('faculty_login.html')
+
+
+# --------------------------------
+# FACULTY DASHBOARD
+# --------------------------------
+
+@app.route('/faculty/dashboard')
+def faculty_dashboard():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+
+    conn = get_db_connection()
+    total_students = conn.execute(
+        "SELECT COUNT(*) FROM students"
+    ).fetchone()[0]
+    total_exams = conn.execute(
+        "SELECT COUNT(*) FROM exams"
+    ).fetchone()[0]
+    total_materials = conn.execute(
+        "SELECT COUNT(*) FROM study_materials"
+    ).fetchone()[0]
+    total_attendance = conn.execute(
+        "SELECT COUNT(*) FROM attendance"
+    ).fetchone()[0]
+    conn.close()
+    return render_template(
+        'faculty_dashboard.html',
+        total_students=total_students,
+        total_exams=total_exams,
+        total_materials=total_materials,
+        total_attendance=total_attendance
+    )
+
+
+# --------------------------------
+# FACULTY LOGOUT
+# --------------------------------
+
+@app.route('/faculty/logout')
+def faculty_logout():
+    session.pop('faculty_id', None)
+    session.pop('faculty_name', None)
+    flash("Faculty logged out successfully!")
+    return redirect(url_for('faculty_login'))
+
+
+# --------------------------------
+# STUDENT REGISTRATION
+# --------------------------------
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+
+    if request.method == 'POST':
+
+        full_name = request.form['full_name']
+        student_id = request.form['student_id']
+        email = request.form['email']
+        department = request.form['department']
+        year = request.form['year']
+        password = request.form['password']
+
+        hashed_password = generate_password_hash(password)
+
+        conn = get_db_connection()
+
+        try:
+            conn.execute("""
+                INSERT INTO students
+                (full_name, student_id, email, department, year, password)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                full_name, student_id, email,
+                department, year, hashed_password
+            ))
+
+            conn.commit()
+            flash("Registration successful! You can now log in.")
+
+        except sqlite3.IntegrityError:
+            flash("Student ID or email already exists.")
+
+        finally:
+            conn.close()
+
+        return redirect(url_for('register'))
+
+    return render_template('register.html')
+
+
+# --------------------------------
+# STUDENT LOGIN
+# --------------------------------
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+
+    if request.method == 'POST':
+
+        email = request.form['email']
+        password = request.form['password']
+
+        conn = get_db_connection()
+
+        student = conn.execute(
+            "SELECT * FROM students WHERE email = ?",
+            (email,)
+        ).fetchone()
+
+        conn.close()
+
+        if student and check_password_hash(student['password'], password):
+
+            session['student_id'] = student['id']
+            session['student_name'] = student['full_name']
+
+            flash("Login successful!")
+
+            return redirect(url_for('student_dashboard'))
+
+        else:
+            flash("Invalid email or password. Please try again.")
+
+    return render_template('login.html')
+
+
+# --------------------------------
+# STUDENT DASHBOARD
+# --------------------------------
+
+@app.route('/dashboard')
+def student_dashboard():
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    student = conn.execute("""
+        SELECT department, year
+        FROM students
+        WHERE id = ?
+    """, (session['student_id'],)).fetchone()
+
+    if student is None:
+        conn.close()
+        session.clear()
+        return redirect(url_for('login'))
+
+    total_attendance = conn.execute("""
+        SELECT COUNT(*)
+        FROM attendance
+        WHERE student_id = ?
+    """, (session['student_id'],)).fetchone()[0]
+    present_attendance = conn.execute("""
+        SELECT COUNT(*)
+        FROM attendance
+        WHERE student_id = ?
+        AND LOWER(status) = 'present'
+    """, (session['student_id'],)).fetchone()[0]
+    attendance_percentage = (
+        round((present_attendance / total_attendance) * 100, 2)
+        if total_attendance else 0
+    )
+
+    upcoming_exams = conn.execute("""
+        SELECT COUNT(*)
+        FROM exams
+        WHERE department = ? AND year = ? AND exam_date >= ?
+    """, (
+        student['department'],
+        student['year'],
+        date.today().isoformat()
+    )).fetchone()[0]
+    total_materials = conn.execute(
+        "SELECT COUNT(*) FROM study_materials"
+    ).fetchone()[0]
+    total_announcements = conn.execute(
+        "SELECT COUNT(*) FROM announcements"
+    ).fetchone()[0]
+    conn.close()
+
+    return render_template(
+        'dashboard.html',
+        attendance_percentage=attendance_percentage,
+        upcoming_exams=upcoming_exams,
+        total_materials=total_materials,
+        total_announcements=total_announcements
+    )
+
+
+# --------------------------------
+# STUDENT PROFILE
+# --------------------------------
+
+@app.route('/profile')
+def student_profile():
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    student = conn.execute(
+        "SELECT * FROM students WHERE id = ?",
+        (session['student_id'],)
+    ).fetchone()
+
+    conn.close()
+
+    if student is None:
+        session.clear()
+        return redirect(url_for('login'))
+
+    return render_template('profile.html', student=student)
+
+
+# --------------------------------
+# STUDENT ATTENDANCE
+# --------------------------------
+
+@app.route('/attendance')
+def attendance():
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    records = conn.execute("""
+        SELECT subject, attendance_date, status
+        FROM attendance
+        WHERE student_id = ?
+        ORDER BY attendance_date DESC
+    """, (session['student_id'],)).fetchall()
+
+    conn.close()
+
+    return render_template('attendance.html', records=records)
+
+
+# --------------------------------
+# FACULTY ATTENDANCE PAGE
+# --------------------------------
+
+@app.route('/faculty/attendance')
+def faculty_attendance():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+
+    conn = get_db_connection()
+
+    students = conn.execute(
+        "SELECT id, full_name, student_id FROM students"
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        'faculty_attendance.html',
+        students=students
+    )
+
+
+# --------------------------------
+# SAVE ATTENDANCE
+# --------------------------------
+
+@app.route('/mark_attendance', methods=['POST'])
+def mark_attendance():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+
+    student_id = request.form.get('student_id')
+    subject = request.form.get('subject', '').strip()
+    attendance_date = request.form.get('attendance_date')
+    status = request.form.get('status')
+
+    if not student_id or not subject or not attendance_date:
+        flash("Please fill in all attendance details.")
+        return redirect(url_for('faculty_attendance'))
+
+    if status not in ['Present', 'Absent']:
+        flash("Please select a valid attendance status.")
+        return redirect(url_for('faculty_attendance'))
+
+    try:
+        date.fromisoformat(attendance_date)
+        student_id = int(student_id)
+
+    except ValueError:
+        flash("Invalid student ID or attendance date.")
+        return redirect(url_for('faculty_attendance'))
+
+    conn = get_db_connection()
+
+    student = conn.execute(
+        "SELECT id FROM students WHERE id = ?",
+        (student_id,)
+    ).fetchone()
+
+    if student is None:
+        conn.close()
+        flash("Student not found.")
+        return redirect(url_for('faculty_attendance'))
+
+    conn.execute("""
+        INSERT INTO attendance
+        (student_id, subject, attendance_date, status)
+        VALUES (?, ?, ?, ?)
+    """, (student_id, subject, attendance_date, status))
+
+    conn.commit()
+    conn.close()
+
+    flash("Attendance saved successfully!")
+
+    return redirect(url_for('faculty_attendance'))
+
+
+# --------------------------------
+# FACULTY ADD EXAMINATION
+# --------------------------------
+
+@app.route('/add_exam', methods=['GET', 'POST'])
+def add_exam():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+ 
+    if request.method == 'POST':
+
+        exam_name = request.form.get('exam_name', '').strip()
+        subject = request.form.get('subject', '').strip()
+        exam_date = request.form.get('exam_date', '')
+        exam_time = request.form.get('exam_time', '')
+        department = request.form.get('department', '').strip()
+        year = request.form.get('year', '')
+
+        if not all([
+            exam_name, subject, exam_date,
+            exam_time, department, year
+        ]):
+
+            flash("Please fill in all examination details.")
+            return redirect(url_for('add_exam'))
+
+        try:
+            date.fromisoformat(exam_date)
+
+        except ValueError:
+            flash("Please enter a valid examination date.")
+            return redirect(url_for('add_exam'))
+
+        conn = get_db_connection()
+
+        conn.execute("""
+            INSERT INTO exams
+            (exam_name, subject, exam_date, exam_time, department, year)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            exam_name,
+            subject,
+            exam_date,
+            exam_time,
+            department,
+            year
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Examination added successfully!")
+
+        return redirect(url_for('add_exam'))
+
+    return render_template('add_exam.html')
+
+
+# --------------------------------
+# STUDENT VIEW EXAMINATION TIMETABLE
+# --------------------------------
+
+@app.route('/exams')
+def view_exams():
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    student = conn.execute("""
+        SELECT department, year
+        FROM students
+        WHERE id = ?
+    """, (session['student_id'],)).fetchone()
+
+    if student is None:
+        conn.close()
+        session.clear()
+        return redirect(url_for('login'))
+
+    exams = conn.execute("""
+        SELECT exam_name, subject, exam_date,
+               exam_time, department, year
+        FROM exams
+        WHERE department = ? AND year = ?
+        ORDER BY exam_date ASC
+    """, (
+        student['department'],
+        student['year']
+    )).fetchall()
+
+    conn.close()
+
+    return render_template('exams.html', exams=exams)
+
+
+# --------------------------------
+# FACULTY ADD EXAMINATION RESULTS
+# --------------------------------
+
+@app.route('/add_result', methods=['GET', 'POST'])
+def add_result():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+ 
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+
+        student_id = request.form.get('student_id')
+        subject = request.form.get('subject', '').strip()
+        marks = request.form.get('marks')
+        total_marks = request.form.get('total_marks')
+        grade = request.form.get('grade')
+
+        try:
+            student_id = int(student_id)
+            marks = int(marks)
+            total_marks = int(total_marks)
+
+            if not subject or not grade:
+                raise ValueError
+
+            if total_marks <= 0 or marks < 0 or marks > total_marks:
+                conn.close()
+                flash("Please enter valid marks.")
+                return redirect(url_for('add_result'))
+
+        except (ValueError, TypeError):
+            conn.close()
+            flash("Please enter valid result details.")
+            return redirect(url_for('add_result'))
+
+        student = conn.execute(
+            "SELECT id FROM students WHERE id = ?",
+            (student_id,)
+        ).fetchone()
+
+        if student is None:
+            conn.close()
+            flash("Student not found.")
+            return redirect(url_for('add_result'))
+
+        conn.execute("""
+            INSERT INTO results
+            (student_id, subject, marks, total_marks, grade)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            student_id, subject, marks, total_marks, grade
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Student results saved successfully!")
+
+        return redirect(url_for('add_result'))
+
+    students = conn.execute(
+        "SELECT id, full_name, student_id FROM students"
+    ).fetchall()
+
+    conn.close()
+
+    return render_template('add_result.html', students=students)
+
+
+# --------------------------------
+# STUDENT VIEW EXAMINATION RESULTS
+# --------------------------------
+
+@app.route('/results')
+def view_results():
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    results = conn.execute("""
+        SELECT subject, marks, total_marks, grade
+        FROM results
+        WHERE student_id = ?
+    """, (session['student_id'],)).fetchall()
+
+    conn.close()
+
+    return render_template('results.html', results=results)
+
+
+# --------------------------------
+# FACULTY UPLOAD STUDY MATERIALS
+# --------------------------------
+
+@app.route('/upload_material', methods=['GET', 'POST'])
+def upload_material():
+    if 'faculty_id' not in session:
+        return redirect(url_for('faculty_login'))
+ 
+    if request.method == 'POST':
+
+        title = request.form.get('title', '').strip()
+        subject = request.form.get('subject', '').strip()
+        description = request.form.get('description', '').strip()
+
+        file = request.files.get('material')
+
+        if not title or not subject or file is None:
+            flash("Please fill in all required details.")
+            return redirect(url_for('upload_material'))
+
+        if file.filename == '':
+            flash("Please select a PDF file.")
+            return redirect(url_for('upload_material'))
+
+        if not allowed_file(file.filename):
+            flash("Only PDF files are allowed.")
+            return redirect(url_for('upload_material'))
+
+        original_filename = secure_filename(file.filename)
+
+        if not original_filename:
+            flash("Invalid file name.")
+            return redirect(url_for('upload_material'))
+
+        # Generate a unique filename
+        unique_filename = str(uuid.uuid4()) + "_" + original_filename
+
+        file_path = os.path.join(
+            app.config['UPLOAD_FOLDER'],
+            unique_filename
+        )
+
+        file.save(file_path)
+
+        conn = get_db_connection()
+
+        try:
+            conn.execute("""
+                INSERT INTO study_materials
+                (title, subject, description, filename)
+                VALUES (?, ?, ?, ?)
+            """, (
+                title,
+                subject,
+                description,
+                unique_filename
+            ))
+
+            conn.commit()
+
+        except sqlite3.Error:
+            conn.rollback()
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+            flash("Unable to save study material. Please try again.")
+
+        else:
+            flash("Study material uploaded successfully!")
+
+        finally:
+            conn.close()
+
+        return redirect(url_for('upload_material'))
+
+    return render_template('upload_material.html')
+
+
+# --------------------------------
+# STUDENT VIEW STUDY MATERIALS
+# --------------------------------
+
+@app.route('/study_materials')
+def view_study_materials():
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    materials = conn.execute("""
+        SELECT id, title, subject, description, filename
+        FROM study_materials
+        ORDER BY uploaded_at DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        'study_materials.html',
+        materials=materials
+    )
+
+
+# --------------------------------
+# STUDENT DOWNLOAD STUDY MATERIALS
+# --------------------------------
+
+@app.route('/download_material/<int:material_id>')
+def download_material(material_id):
+
+    if 'student_id' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    material = conn.execute(
+        "SELECT filename FROM study_materials WHERE id = ?",
+        (material_id,)
+    ).fetchone()
+
+    conn.close()
+
+    if material is None:
+        abort(404)
+
+    return send_from_directory(
+        app.config['UPLOAD_FOLDER'],
+        material['filename'],
+        as_attachment=True
+    )
+
+
+# --------------------------------
+# STUDENT LOGOUT
+# --------------------------------
+
+@app.route('/logout')
+def logout():
+
+    session.clear()
+
+    flash("You have logged out successfully.")
+
+    return redirect(url_for('login'))
+
+
+# --------------------------------
+# FILE SIZE ERROR
+# --------------------------------
+
+@app.errorhandler(413)
+def file_too_large(error):
+    flash("File is too large. Maximu m allowed size is 10 MB.")
+    return redirect(url_for('upload_material'))
+
+
+# --------------------------------
+# RUN APPLICATION
+# --------------------------------
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -1,9 +1,8 @@
 __pycache__/
-*.py[cod]
+*.pyc
 .venv/
 venv/
 .env
-.env.*
-!.env.example
-database/
-static/uploads/
+database/college.db
+static/uploads/*
+!static/uploads/.gitkeep
