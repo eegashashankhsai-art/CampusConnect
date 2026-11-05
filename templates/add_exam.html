@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusConnect - Add Examination</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="login-container">
+        <div class="login-box">
+
+            <h1>Add Examination</h1>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <p style="color: green; font-weight: bold;">
+                            {{ message }}
+                        </p>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form action="/add_exam" method="POST">
+
+                <label>Examination Name:</label>
+                <input type="text"
+                       name="exam_name"
+                       placeholder="Example: Mid Examination"
+                       required>
+
+                <br><br>
+
+                <label>Subject:</label>
+                <input type="text"
+                       name="subject"
+                       placeholder="Example: Python Programming"
+                       required>
+
+                <br><br>
+
+                <label>Examination Date:</label>
+                <input type="date"
+                       name="exam_date"
+                       required>
+
+                <br><br>
+
+                <label>Examination Time:</label>
+                <input type="time"
+                       name="exam_time"
+                       required>
+
+                <br><br>
+
+                <label>Department:</label>
+                <input type="text"
+                       name="department"
+                       placeholder="Example: Computer Science"
+                       required>
+
+                <br><br>
+
+                <label>Academic Year:</label>
+                <select name="year" required>
+                    <option value="">Select Year</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                </select>
+
+                <br><br>
+
+                <button type="submit">Add Examination</button>
+
+            </form>
+
+            <br>
+
+            <a href="/dashboard">Back to Dashboard</a>
+
+        </div>
+    </div>
+
+</body>
+</html>

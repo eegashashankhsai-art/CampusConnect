@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusConnect | College Management System</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<header>
+    <div class="logo">CampusConnect</div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/login">Student Login</a>
+        <a href="/register">Register</a>
+        <a href="/faculty/login">Faculty Login</a>
+        <a href="/admin/login">Admin Login</a>
+        <a href="/faculty/attendance">Faculty Attendance</a>
+        <a href="/results">Examination Results</a>
+        <a href="/exams">Examination Timetable</a>
+        <a href="/study_materials">Study Materials</a>
+        <a href="/announcements">📢 College Announcements</a>
+    </nav>
+</header>
+
+<section class="hero">
+
+    <h1>Welcome to CampusConnect</h1>
+
+    <h2>Your College, Your Digital World</h2>
+
+    <p>
+        A smart platform connecting students, faculty
+        and college administration in one place.
+    </p>
+
+    <a href="/login" class="btn">Student Login</a>
+
+</section>
+
+<section class="features">
+
+    <div class="card">
+        <h3>Students</h3>
+        <p>Access attendance, examinations and study materials.</p>
+        <a href="/login">Student Login</a>
+    </div>
+
+    <div class="card">
+        <h3>Faculty</h3>
+        <p>Manage attendance, examinations and student performance.</p>
+        <a href="/faculty/login">Faculty Login</a>
+    </div>
+
+    <div class="card">
+        <h3>Administration</h3>
+        <p>Manage college announcements and activities.</p>
+        <a href="/admin/login">Admin Login</a>
+    </div>
+
+</section>
+
+<footer>
+    <p>© 2026 CampusConnect | Smart College Management System</p>
+</footer>
+
+</body>
+</html>

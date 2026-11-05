@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publish Announcement - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/admin/dashboard">Admin Dashboard</a>
+        <a href="/admin/logout">Logout</a>
+    </nav>
+
+    <div class="login-container admin-page-container">
+
+        <h1>📢 Publish College Announcement</h1>
+
+        <p>Enter the announcement details below.</p>
+
+        <hr>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="/admin/add_announcement">
+
+            <label>Announcement Title</label>
+            <input type="text"
+                   name="title"
+                   placeholder="Enter announcement title"
+                   required>
+
+            <br><br>
+
+            <label>Description</label>
+            <textarea name="description"
+                      rows="6"
+                      placeholder="Enter announcement details"
+                      required></textarea>
+
+            <br><br>
+
+            <label>Announcement Category</label>
+
+            <select name="category" required>
+                <option value="">Select Category</option>
+                <option value="General">General</option>
+                <option value="Academic">Academic</option>
+                <option value="Events">Events</option>
+                <option value="Examinations">Examinations</option>
+                <option value="Urgent">Urgent</option>
+            </select>
+
+            <br><br>
+
+            <button type="submit">Publish Announcement</button>
+
+        </form>
+
+        <br>
+
+        <a href="/admin/dashboard">Back to Admin Dashboard</a>
+
+    </div>
+
+</body>
+</html>

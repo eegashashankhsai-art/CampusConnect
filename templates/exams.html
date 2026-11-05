@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusConnect - Examination Timetable</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="table-page-container">
+
+        <h1>Examination Timetable</h1>
+
+        <h3>Welcome, {{ session['student_name'] }}!</h3>
+
+        <hr>
+
+        {% if exams %}
+
+        <div class="table-scroll">
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Exam Name</th>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Department</th>
+                        <th>Year</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for exam in exams %}
+
+                    <tr>
+                        <td>{{ exam['exam_name'] }}</td>
+                        <td>{{ exam['subject'] }}</td>
+                        <td>{{ exam['exam_date'] }}</td>
+                        <td>{{ exam['exam_time'] }}</td>
+                        <td>{{ exam['department'] }}</td>
+                        <td>{{ exam['year'] }}</td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <p>No examinations have been scheduled yet.</p>
+
+        {% endif %}
+
+        <br>
+
+        <a href="/dashboard">Back to Dashboard</a>
+
+    </div>
+
+</body>
+</html>

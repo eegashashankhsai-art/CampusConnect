@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Faculty Login - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/">Home</a>
+    </nav>
+
+    <div class="faculty-login-container">
+
+        <h2>Faculty Login</h2>
+
+        <p>Login to access your faculty dashboard.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+
+            <label>Faculty Email</label>
+            <input type="email"
+                   name="email"
+                   placeholder="Enter your email"
+                   required>
+
+            <label>Password</label>
+            <input type="password"
+                   name="password"
+                   placeholder="Enter your password"
+                   required>
+
+            <button type="submit">Login</button>
+
+        </form>
+
+        <br>
+
+        <a href="/">Back to Homepage</a>
+
+    </div>
+
+</body>
+</html>

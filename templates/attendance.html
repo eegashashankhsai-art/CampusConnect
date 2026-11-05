@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusConnect - Attendance</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="login-container">
+        <div class="login-box">
+
+            <h1>Attendance Management</h1>
+
+            <h2>Welcome, {{ session['student_name'] }}!</h2>
+
+            <hr>
+
+            <h3>Your Attendance Records</h3>
+
+            {% if records %}
+
+                <table border="1" cellpadding="10" cellspacing="0">
+
+                    <tr>
+                        <th>Subject</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                    </tr>
+
+                    {% for record in records %}
+
+                    <tr>
+                        <td>{{ record['subject'] }}</td>
+                        <td>{{ record['attendance_date'] }}</td>
+                        <td>{{ record['status'] }}</td>
+                    </tr>
+
+                    {% endfor %}
+
+                </table>
+
+            {% else %}
+
+                <p>No attendance records available yet.</p>
+
+            {% endif %}
+
+            <br>
+
+            <a href="/dashboard">Back to Dashboard</a>
+
+        </div>
+    </div>
+
+</body>
+</html>

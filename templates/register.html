@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusConnect Registration</title>
+
+    <link rel="stylesheet"
+    href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<header>
+    <div class="logo">CampusConnect</div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/login">Login</a>
+        <a href="/register">Register</a>
+    </nav>
+</header>
+
+<div class="login-container">
+
+    <div class="login-box">
+
+        <h1>Create Account</h1>
+
+        <p>Join CampusConnect Today!</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        {% endwith %}
+
+        <form action="/register" method="POST">
+
+            <label>Full Name</label>
+            <input type="text" name="full_name"
+            placeholder="Enter your full name" required>
+
+            <label>Student ID</label>
+            <input type="text" name="student_id"
+            placeholder="Enter student ID" required>
+
+            <label>Email Address</label>
+            <input type="email" name="email"
+            placeholder="Enter email address" required>
+
+            <label>Department</label>
+
+            <select name="department" required>
+                <option value="">Select Department</option>
+                <option>Computer Science</option>
+                <option>Mathematics</option>
+                <option>Physics</option>
+                <option>Commerce</option>
+                <option>Other</option>
+            </select>
+
+            <label>Year of Study</label>
+
+            <select name="year" required>
+                <option value="">Select Year</option>
+                <option>1st Year</option>
+                <option>2nd Year</option>
+                <option>3rd Year</option>
+                <option>4th Year</option>
+            </select>
+
+            <label>Password</label>
+            <input type="password" name="password"
+            placeholder="Create password" required minlength="8">
+
+            <button type="submit">Register Now</button>
+
+        </form>
+
+        <p class="register-text">
+            Already have an account?
+            <a href="/login">Login Here</a>
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>

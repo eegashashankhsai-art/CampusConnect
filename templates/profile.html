@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Profile - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="login-container">
+        <div class="login-box">
+
+            <h1>Student Profile</h1>
+
+            <h2>{{ student['full_name'] }}</h2>
+
+            <p><strong>Student ID:</strong> {{ student['student_id'] }}</p>
+
+            <p><strong>Email:</strong> {{ student['email'] }}</p>
+
+            <p><strong>Department:</strong> {{ student['department'] }}</p>
+
+            <p><strong>Academic Year:</strong> {{ student['year'] }}</p>
+
+            <br>
+
+            <a href="/dashboard">Back to Dashboard</a>
+
+        </div>
+    </div>
+
+</body>
+</html>

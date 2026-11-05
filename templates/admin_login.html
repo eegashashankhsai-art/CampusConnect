@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Login - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/">Home</a>
+    </nav>
+
+    <div class="admin-login-container">
+
+        <h1>🔐 Admin Login</h1>
+
+        <p>Login to manage college announcements.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="/admin/login">
+
+            <label>Admin Username</label>
+            <input type="text"
+                   name="username"
+                   placeholder="Enter username"
+                   required>
+
+            <label>Admin Password</label>
+            <input type="password"
+                   name="password"
+                   placeholder="Enter password"
+                   required>
+
+            <button type="submit">Login</button>
+
+        </form>
+
+        <br>
+
+        <a href="/">Back to Home</a>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>CampusConnect - Student Dashboard</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<nav>
+    <h2>CampusConnect</h2>
+    <a href="/logout">Logout</a>
+</nav>
+
+<div class="login-container student-dashboard-page">
+    <div class="login-box dashboard-container">
+
+        <h1>Welcome, {{ session['student_name'] }}!</h1>
+
+        <h2>Student Dashboard</h2>
+
+        <p>Your login is successful.</p>
+
+        <hr>
+
+        <h2>Dashboard Overview</h2>
+
+        <div class="stats-container">
+
+            <div class="stat-card">
+                <h3>Attendance Percentage</h3>
+                <h1>{{ attendance_percentage }}%</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>Upcoming Examinations</h3>
+                <h1>{{ upcoming_exams }}</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>Study Materials</h3>
+                <h1>{{ total_materials }}</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>College Announcements</h3>
+                <h1>{{ total_announcements }}</h1>
+            </div>
+
+        </div>
+
+        <hr>
+
+        <h3>Student Services</h3>
+
+        <p>👤 <a href="/profile">My Student Profile</a></p>
+
+       <p>📅 <a href="/attendance">Attendance Management</a></p>
+
+      <p>📅 <a href="/exams">Examination Timetable</a></p>
+
+        <p>📊 <a href="/results">Examination Results</a></p>
+
+        <p>📚 <a href="/study_materials">Study Materials</a></p>
+
+        <p>📢 <a href="/announcements">College Announcements</a></p>
+
+        <br>
+
+        <a href="/logout">Logout</a>
+
+    </div>
+</div>
+
+</body>
+</html>

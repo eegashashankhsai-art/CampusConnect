@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Faculty Dashboard - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="{{ url_for('faculty_logout') }}">Logout</a>
+    </nav>
+
+    <div class="dashboard-container faculty-dashboard-page">
+
+        <div class="faculty-dashboard-intro">
+            <h1>Faculty Dashboard</h1>
+
+            <h3>Welcome, {{ session['faculty_name'] }}!</h3>
+
+            <p>Manage your academic activities here.</p>
+        </div>
+
+        <hr>
+
+        <h2>Dashboard Overview</h2>
+
+        <div class="stats-container">
+
+            <div class="stat-card">
+                <h3>Total Students</h3>
+                <h1>{{ total_students }}</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>Total Examinations</h3>
+                <h1>{{ total_exams }}</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>Study Materials</h3>
+                <h1>{{ total_materials }}</h1>
+            </div>
+
+            <div class="stat-card">
+                <h3>Attendance Records</h3>
+                <h1>{{ total_attendance }}</h1>
+            </div>
+
+        </div>
+
+        <hr>
+
+        <h2>Faculty Services</h2>
+
+        <div class="dashboard-links faculty-services">
+
+            <a href="{{ url_for('faculty_attendance') }}">
+                Mark Student Attendance
+            </a>
+
+
+            <a href="{{ url_for('add_exam') }}">
+                Manage Examination Timetable
+            </a>
+
+
+            <a href="{{ url_for('add_result') }}">
+                Add Student Results
+            </a>
+
+
+            <a href="{{ url_for('upload_material') }}">
+                Upload Study Materials
+            </a>
+
+        </div>
+
+        <br>
+
+        <a href="/">Back to Homepage</a>
+
+    </div>
+
+</body>
+</html>

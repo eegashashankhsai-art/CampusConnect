@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>CampusConnect - Faculty Attendance</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<nav>
+    <h2>CampusConnect</h2>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/logout">Logout</a>
+</nav>
+
+<div class="login-container">
+    <div class="login-box">
+
+        <h1>Faculty Attendance</h1>
+
+        <!-- Success and Error Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p style="color: green; font-weight: bold;">
+                        {{ message }}
+                    </p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <h3>Mark Student Attendance</h3>
+
+        <form action="/mark_attendance" method="POST">
+
+            <label>Select Student:</label>
+
+            <select name="student_id" required>
+
+                <option value="">Select Student</option>
+
+                {% for student in students %}
+
+                <option value="{{ student['id'] }}">
+                    {{ student['full_name'] }} ({{ student['student_id'] }})
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+            <br><br>
+
+            <label>Subject:</label>
+
+            <input type="text"
+                   name="subject"
+                   placeholder="Enter Subject"
+                   required>
+
+            <br><br>
+
+            <label>Attendance Date:</label>
+
+            <input type="date"
+                   name="attendance_date"
+                   required>
+
+            <br><br>
+
+            <label>Status:</label>
+
+            <select name="status" required>
+
+                <option value="">Select Status</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+
+            </select>
+
+            <br><br>
+
+            <button type="submit">Submit Attendance</button>
+
+        </form>
+
+        <br>
+
+        <a href="/dashboard">Back to Dashboard</a>
+
+    </div>
+</div>
+
+</body>
+</html>

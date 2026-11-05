@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Announcement - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/admin/dashboard">Admin Dashboard</a>
+        <a href="/announcements">View Announcements</a>
+        <a href="/admin/logout">Logout</a>
+    </nav>
+
+    <div class="login-container admin-page-container">
+
+        <h1>✏️ Edit Announcement</h1>
+
+        <p>Update the announcement details below.</p>
+
+        <hr>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+
+            <label>Announcement Title</label>
+
+            <input type="text"
+                   name="title"
+                   value="{{ announcement['title'] }}"
+                   required>
+
+            <label>Description</label>
+
+            <textarea name="description"
+                      rows="6"
+                      required>{{ announcement['description'] }}</textarea>
+
+            <label>Announcement Category</label>
+
+            <select name="category" required>
+
+                <option value="General"
+                    {% if announcement['category'] == 'General' %}selected{% endif %}>
+                    General
+                </option>
+
+                <option value="Academic"
+                    {% if announcement['category'] == 'Academic' %}selected{% endif %}>
+                    Academic
+                </option>
+
+                <option value="Events"
+                    {% if announcement['category'] == 'Events' %}selected{% endif %}>
+                    Events
+                </option>
+
+                <option value="Examinations"
+                    {% if announcement['category'] == 'Examinations' %}selected{% endif %}>
+                    Examinations
+                </option>
+
+                <option value="Urgent"
+                    {% if announcement['category'] == 'Urgent' %}selected{% endif %}>
+                    Urgent
+                </option>
+
+            </select>
+
+            <br><br>
+
+            <button type="submit">Update Announcement</button>
+
+        </form>
+
+        <br>
+
+        <a href="/admin/dashboard">Back to Admin Dashboard</a>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/">Home</a>
+        <a href="/announcements">View Announcements</a>
+        <a href="/admin/logout">Logout</a>
+    </nav>
+
+    <div class="login-container admin-page-container">
+
+        <h1>Admin Dashboard</h1>
+
+        <h3>Welcome, {{ session['admin_username'] }}!</h3>
+
+        <hr>
+
+        <h2>Management Options</h2>
+
+        <p>
+            📢 <a href="/admin/add_announcement">
+                Publish College Announcement
+            </a>
+        </p>
+
+        <p>
+            📋 <a href="/announcements">
+                View All Announcements
+            </a>
+        </p>
+
+        <p>
+            🏠 <a href="/">Return to Homepage</a>
+        </p>
+
+        <hr>
+
+        <h2>📢 Manage Published Announcements</h2>
+
+        {% if announcements %}
+
+            {% for announcement in announcements %}
+
+                <div class="announcement-card">
+
+                    <h3>{{ announcement['title'] }}</h3>
+
+                    <p>{{ announcement['description'] }}</p>
+
+                    <p>
+                        <strong>Category:</strong>
+                        {{ announcement['category'] }}
+                    </p>
+
+                    <small>
+                        Published on: {{ announcement['created_at'] }}
+                    </small>
+
+                    <br><br>
+
+                    <a href="/admin/edit_announcement/{{ announcement['id'] }}">
+                        ✏️ Edit
+                    </a>
+
+                    |
+
+                    <form method="POST"
+                          action="/admin/delete_announcement/{{ announcement['id'] }}"
+                          onsubmit="return confirm('Are you sure you want to delete this announcement?');"
+                          style="display: inline;">
+
+                        <button type="submit">
+                            🗑️ Delete
+                        </button>
+
+                    </form>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>No announcements have been published yet.</p>
+
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

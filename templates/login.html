@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Login - CampusConnect</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/">Home</a>
+        <a href="/register">Register</a>
+    </nav>
+
+    <div class="student-login-container">
+
+            <h2>Student Login</h2>
+            <p>Welcome back! Please login to continue.</p>
+
+            {% with messages = get_flashed_messages() %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endwith %}
+
+            <form action="/login" method="POST">
+
+                <input type="email"
+                       name="email"
+                       placeholder="Enter Email"
+                       required>
+
+                <input type="password"
+                       name="password"
+                       placeholder="Enter Password"
+                       required>
+
+                <button type="submit">Login</button>
+
+            </form>
+
+            <p>
+                Don't have an account?
+                <a href="/register">Register Here</a>
+            </p>
+
+    </div>
+
+</body>
+</html>

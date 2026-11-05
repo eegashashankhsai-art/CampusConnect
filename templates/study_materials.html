@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusConnect - Study Materials</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="materials-container">
+
+        <h1>📚 Study Materials</h1>
+
+        <p class="materials-welcome">
+            Welcome, {{ session['student_name'] }}!
+        </p>
+
+        <hr>
+
+        {% if materials %}
+
+            {% for material in materials %}
+
+                <div class="material-card">
+
+                    <h2>{{ material['title'] }}</h2>
+
+                    <h4>
+                        Subject: {{ material['subject'] }}
+                    </h4>
+
+                    <p>
+                        Description:
+                        {{ material['description'] or 'No description available.' }}
+                    </p>
+
+                    <a class="download-button"
+                       href="{{ url_for('download_material', material_id=material['id']) }}">
+                        Download PDF
+                    </a>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>No study materials uploaded yet.</p>
+
+        {% endif %}
+
+        <a class="back-dashboard" href="/dashboard">
+            Back to Dashboard
+        </a>
+
+    </div>
+
+</body>
+</html>

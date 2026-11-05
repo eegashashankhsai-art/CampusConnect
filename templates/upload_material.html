@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CampusConnect - Upload Study Materials</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .upload-box {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .upload-box label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .upload-box input,
+        .upload-box textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        .upload-box textarea {
+            height: 100px;
+        }
+
+        .upload-box button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <div class="upload-box">
+
+        <h1>Upload Study Materials</h1>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p style="color: green; font-weight: bold;">
+                        {{ message }}
+                    </p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST"
+              action="/upload_material"
+              enctype="multipart/form-data">
+
+            <label>Material Title</label>
+            <input type="text" name="title"
+                   placeholder="Enter material title" required>
+
+            <label>Subject</label>
+            <input type="text" name="subject"
+                   placeholder="Enter subject name" required>
+
+            <label>Description</label>
+            <textarea name="description"
+                      placeholder="Enter description"></textarea>
+
+            <label>Select PDF File</label>
+            <input type="file" name="material"
+                   accept=".pdf,application/pdf" required>
+
+            <button type="submit">Upload Material</button>
+
+        </form>
+
+        <br>
+
+        <a href="/dashboard">Back to Dashboard</a>
+
+    </div>
+
+</body>
+</html>
