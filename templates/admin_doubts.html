@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Doubt Monitoring</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="faculty-add-container">
+
+        <h2>Student Doubt Monitoring</h2>
+
+        <p>Monitor all student questions and faculty responses.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if doubts %}
+
+            {% for doubt in doubts %}
+
+                <div class="doubt-card">
+
+                    <h3>{{ doubt['title'] }}</h3>
+
+                    <p><strong>Student:</strong>
+                        {{ doubt['student_name'] }}
+                    </p>
+
+                    <p><strong>Student ID:</strong>
+                        {{ doubt['student_code'] }}
+                    </p>
+
+                    <p><strong>Subject:</strong>
+                        {{ doubt['subject'] }}
+                    </p>
+
+                    <p><strong>Description:</strong></p>
+
+                    <p>{{ doubt['description'] }}</p>
+
+                    <p><strong>Status:</strong>
+                        {{ doubt['status'] }}
+                    </p>
+
+                    <p><strong>Submitted:</strong>
+                        {{ doubt['created_at'] }}
+                    </p>
+
+                    <hr>
+
+                    <h4>Faculty Replies</h4>
+
+                    {% if doubt['replies'] %}
+
+                        {% for reply in doubt['replies'] %}
+
+                            <div class="doubt-reply">
+
+                                <p>
+                                    <strong>
+                                        {{ reply['faculty_name'] }}
+                                    </strong>
+                                </p>
+
+                                <p>{{ reply['answer'] }}</p>
+
+                                <small>
+                                    {{ reply['created_at'] }}
+                                </small>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p>No faculty replies yet.</p>
+
+                    {% endif %}
+
+                    <hr>
+
+                    <h4>Admin Reply</h4>
+
+                    <form method="POST"
+                          action="{{ url_for('admin_reply_doubt', doubt_id=doubt['id']) }}">
+
+                        <textarea name="answer"
+                                  rows="4"
+                                  placeholder="Enter your reply here..."
+                                  required></textarea>
+
+                        <br><br>
+
+                        <button type="submit">Submit Admin Reply</button>
+
+                    </form>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>No student doubts have been submitted yet.</p>
+
+        {% endif %}
+
+        <br>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Back to Admin Dashboard
+        </a>
+
+    </div>
+
+</body>
+</html>

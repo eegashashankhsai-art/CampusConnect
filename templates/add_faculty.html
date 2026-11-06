@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Faculty - CampusConnect</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="faculty-add-container">
+
+        <h1>Add New Faculty</h1>
+        <p>Create a new faculty account</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="flash-message">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('add_faculty') }}">
+
+            <label>Full Name</label>
+            <input type="text" name="full_name"
+                   placeholder="Enter faculty name" required>
+
+            <label>Email Address</label>
+            <input type="email" name="email"
+                   placeholder="Enter faculty email" required>
+
+            <label>Department</label>
+            <input type="text" name="department"
+                   placeholder="Enter department" required>
+
+            <label>Password</label>
+            <input type="password" name="password"
+                   placeholder="Create password (minimum 8 characters)"
+                   minlength="8" required>
+
+            <label>Confirm Password</label>
+            <input type="password" name="confirm_password"
+                   placeholder="Confirm password" required>
+
+            <button type="submit">Create Faculty Account</button>
+
+        </form>
+
+        <a href="{{ url_for('manage_faculty') }}">Back to Faculty Management</a>
+
+    </div>
+
+</body>
+</html>

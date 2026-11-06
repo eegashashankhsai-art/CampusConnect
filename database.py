@@ -109,6 +109,47 @@ def create_tables():
         )
     """)
 
+    # Student Doubts Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS student_doubts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            subject TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Pending'
+                CHECK (status IN ('Pending', 'Answered', 'Resolved')),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (student_id) REFERENCES students(id)
+        )
+    """)
+
+    # Doubt Replies Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS doubt_replies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doubt_id INTEGER NOT NULL,
+            faculty_id INTEGER NOT NULL,
+            answer TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (doubt_id) REFERENCES student_doubts(id),
+            FOREIGN KEY (faculty_id) REFERENCES faculty(id)
+        )
+    """)
+
+    # Admin Doubt Replies Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admin_doubt_replies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doubt_id INTEGER NOT NULL,
+            admin_id INTEGER NOT NULL,
+            answer TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (doubt_id) REFERENCES student_doubts(id),
+            FOREIGN KEY (admin_id) REFERENCES admins(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 

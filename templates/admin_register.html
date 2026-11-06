@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Registration - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+        <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('admin_logout') }}">Logout</a>
+    </nav>
+
+    <div class="login-container admin-page-container">
+
+        <h1>Admin Registration</h1>
+
+        <p>Create a new administrator account.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST"
+              action="{{ url_for('admin_register') }}">
+
+            <label>Admin Username</label>
+
+            <input type="text"
+                   name="username"
+                   placeholder="Enter username"
+                   required>
+
+            <label>Password</label>
+
+            <input type="password"
+                   name="password"
+                   placeholder="Enter password"
+                   minlength="8"
+                   required>
+
+            <label>Confirm Password</label>
+
+            <input type="password"
+                   name="confirm_password"
+                   placeholder="Confirm password"
+                   minlength="8"
+                   required>
+
+            <button type="submit">
+                Register Admin
+            </button>
+
+        </form>
+
+        <br>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Back to Admin Dashboard
+        </a>
+
+    </div>
+
+</body>
+</html>

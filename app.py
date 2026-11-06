@@ -125,6 +125,282 @@ def admin_dashboard():
     )
 
 
+@app.route('/admin/doubts')
+def admin_doubts():
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    doubts = conn.execute("""
+        SELECT
+            student_doubts.id,
+            student_doubts.subject,
+            student_doubts.title,
+            student_doubts.description,
+            student_doubts.status,
+            student_doubts.created_at,
+            students.full_name AS student_name,
+            students.student_id AS student_code
+        FROM student_doubts
+        JOIN students
+            ON student_doubts.student_id = students.id
+        ORDER BY student_doubts.created_at DESC
+    """).fetchall()
+    doubts_with_replies = []
+    for doubt in doubts:
+        replies = conn.execute("""
+            SELECT
+                doubt_replies.answer,
+                doubt_replies.created_at,
+                faculty.full_name AS faculty_name
+            FROM doubt_replies
+            JOIN faculty
+                ON doubt_replies.faculty_id = faculty.id
+            WHERE doubt_replies.doubt_id = ?
+            ORDER BY doubt_replies.created_at ASC
+        """, (doubt['id'],)).fetchall()
+        doubt_data = dict(doubt)
+        doubt_data['replies'] = replies
+        doubts_with_replies.append(doubt_data)
+
+    conn.close()
+    return render_template(
+        'admin_doubts.html',
+        doubts=doubts_with_replies
+    )
+
+
+@app.route('/admin/doubts/reply/<int:doubt_id>', methods=['POST'])
+def admin_reply_doubt(doubt_id):
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    answer = request.form.get('answer', '').strip()
+    if not answer:
+        flash("Please enter your reply.")
+        return redirect(url_for('admin_doubts'))
+
+    conn = get_db_connection()
+    doubt = conn.execute(
+        "SELECT id FROM student_doubts WHERE id = ?",
+        (doubt_id,)
+    ).fetchone()
+    if doubt is None:
+        conn.close()
+        flash("Doubt not found.")
+        return redirect(url_for('admin_doubts'))
+
+    conn.execute("""
+        INSERT INTO admin_doubt_replies
+        (doubt_id, admin_id, answer)
+        VALUES (?, ?, ?)
+    """, (
+        doubt_id,
+        session['admin_id'],
+        answer
+    ))
+    conn.execute("""
+        UPDATE student_doubts
+        SET status = 'Answered'
+        WHERE id = ?
+    """, (doubt_id,))
+    conn.commit()
+    conn.close()
+    flash("Your admin reply has been submitted successfully!")
+    return redirect(url_for('admin_doubts'))
+
+
+@app.route('/admin/faculty')
+def manage_faculty():
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    faculty_list = conn.execute("""
+        SELECT id, full_name, email, department
+        FROM faculty
+        ORDER BY id DESC
+    """).fetchall()
+    conn.close()
+    return render_template(
+        'manage_faculty.html',
+        faculty_list=faculty_list
+    )
+
+
+@app.route('/admin/faculty/edit/<int:faculty_id>', methods=['GET', 'POST'])
+def edit_faculty(faculty_id):
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    faculty = conn.execute(
+        "SELECT * FROM faculty WHERE id = ?",
+        (faculty_id,)
+    ).fetchone()
+    if not faculty:
+        conn.close()
+        flash("Faculty member not found.")
+        return redirect(url_for('manage_faculty'))
+
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        department = request.form.get('department', '').strip()
+
+        if not full_name or not email or not department:
+            conn.close()
+            flash("All fields are required.")
+            return redirect(url_for('edit_faculty', faculty_id=faculty_id))
+
+        existing_email = conn.execute("""
+            SELECT id FROM faculty
+            WHERE email = ? AND id != ?
+        """, (email, faculty_id)).fetchone()
+        if existing_email:
+            conn.close()
+            flash("This email is already registered.")
+            return redirect(url_for('edit_faculty', faculty_id=faculty_id))
+
+        conn.execute("""
+            UPDATE faculty
+            SET full_name = ?, email = ?, department = ?
+            WHERE id = ?
+        """, (full_name, email, department, faculty_id))
+        conn.commit()
+        conn.close()
+        flash("Faculty details updated successfully!")
+        return redirect(url_for('manage_faculty'))
+
+    conn.close()
+    return render_template(
+        'edit_faculty.html',
+        faculty=faculty
+    )
+
+
+@app.route('/admin/faculty/delete/<int:faculty_id>', methods=['POST'])
+def delete_faculty(faculty_id):
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    conn = get_db_connection()
+    faculty = conn.execute(
+        "SELECT id FROM faculty WHERE id = ?",
+        (faculty_id,)
+    ).fetchone()
+    if not faculty:
+        conn.close()
+        flash("Faculty member not found.")
+        return redirect(url_for('manage_faculty'))
+
+    conn.execute(
+        "DELETE FROM faculty WHERE id = ?",
+        (faculty_id,)
+    )
+    conn.commit()
+    conn.close()
+    flash("Faculty member deleted successfully!")
+    return redirect(url_for('manage_faculty'))
+
+
+@app.route('/admin/faculty/add', methods=['GET', 'POST'])
+def add_faculty():
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        department = request.form.get('department', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not full_name or not email or not department or not password:
+            flash("All fields are required.")
+            return redirect(url_for('add_faculty'))
+
+        if len(password) < 8:
+            flash("Password must contain at least 8 characters.")
+            return redirect(url_for('add_faculty'))
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return redirect(url_for('add_faculty'))
+
+        hashed_password = generate_password_hash(password)
+        conn = get_db_connection()
+        try:
+            conn.execute("""
+                INSERT INTO faculty
+                (full_name, email, department, password)
+                VALUES (?, ?, ?, ?)
+            """, (full_name, email, department, hashed_password))
+            conn.commit()
+        except sqlite3.IntegrityError:
+            flash("A faculty account with this email already exists.")
+            return redirect(url_for('add_faculty'))
+        finally:
+            conn.close()
+
+        flash("Faculty account created successfully!")
+        return redirect(url_for('manage_faculty'))
+
+    return render_template('add_faculty.html')
+
+
+@app.route('/admin/register', methods=['GET', 'POST'])
+def admin_register():
+    if 'admin_id' not in session:
+        flash("Please login as admin first.")
+        return redirect(url_for('admin_login'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not username or not password:
+            flash("All fields are required.")
+            return redirect(url_for('admin_register'))
+
+        if len(password) < 8:
+            flash("Password must contain at least 8 characters.")
+            return redirect(url_for('admin_register'))
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return redirect(url_for('admin_register'))
+
+        conn = get_db_connection()
+        existing_admin = conn.execute(
+            "SELECT id FROM admins WHERE username = ?",
+            (username,)
+        ).fetchone()
+        if existing_admin:
+            conn.close()
+            flash("This admin username already exists.")
+            return redirect(url_for('admin_register'))
+
+        hashed_password = generate_password_hash(password)
+        conn.execute(
+            "INSERT INTO admins (username, password) VALUES (?, ?)",
+            (username, hashed_password)
+        )
+        conn.commit()
+        conn.close()
+        flash("New admin registered successfully!")
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin_register.html')
+
+
 # --------------------------------
 # PUBLISH ANNOUNCEMENT
 # --------------------------------
@@ -491,6 +767,108 @@ def student_dashboard():
         upcoming_exams=upcoming_exams,
         total_materials=total_materials,
         total_announcements=total_announcements
+    )
+
+
+# --------------------------------
+# STUDENT ASK A DOUBT
+# --------------------------------
+
+@app.route('/ask_doubt', methods=['GET', 'POST'])
+def ask_doubt():
+    if 'student_id' not in session:
+        flash("Please login as a student first.")
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        subject = request.form.get('subject', '').strip()
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+
+        if not subject or not title or not description:
+            flash("Please fill in all doubt details.")
+            return redirect(url_for('ask_doubt'))
+
+        conn = get_db_connection()
+        student = conn.execute(
+            "SELECT id FROM students WHERE id = ?",
+            (session['student_id'],)
+        ).fetchone()
+        if student is None:
+            conn.close()
+            session.clear()
+            return redirect(url_for('login'))
+
+        conn.execute("""
+            INSERT INTO student_doubts
+            (student_id, subject, title, description)
+            VALUES (?, ?, ?, ?)
+        """, (
+            session['student_id'],
+            subject,
+            title,
+            description
+        ))
+        conn.commit()
+        conn.close()
+        flash("Your doubt has been submitted successfully!")
+        return redirect(url_for('ask_doubt'))
+
+    return render_template('ask_doubt.html')
+
+
+# --------------------------------
+# STUDENT MY DOUBTS
+# --------------------------------
+
+@app.route('/my_doubts')
+def my_doubts():
+    if 'student_id' not in session:
+        flash("Please login as a student first.")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    doubts = conn.execute("""
+        SELECT id, subject, title, description, status, created_at
+        FROM student_doubts
+        WHERE student_id = ?
+        ORDER BY created_at DESC
+    """, (session['student_id'],)).fetchall()
+
+    doubts_with_replies = []
+    for doubt in doubts:
+        faculty_replies = conn.execute("""
+            SELECT
+                doubt_replies.answer,
+                doubt_replies.created_at,
+                faculty.full_name AS responder_name
+            FROM doubt_replies
+            JOIN faculty
+                ON doubt_replies.faculty_id = faculty.id
+            WHERE doubt_replies.doubt_id = ?
+            ORDER BY doubt_replies.created_at ASC
+        """, (doubt['id'],)).fetchall()
+        admin_replies = conn.execute("""
+            SELECT
+                admin_doubt_replies.answer,
+                admin_doubt_replies.created_at,
+                admins.username AS responder_name
+            FROM admin_doubt_replies
+            JOIN admins
+                ON admin_doubt_replies.admin_id = admins.id
+            WHERE admin_doubt_replies.doubt_id = ?
+            ORDER BY admin_doubt_replies.created_at ASC
+        """, (doubt['id'],)).fetchall()
+        doubts_with_replies.append({
+            'doubt': doubt,
+            'faculty_replies': faculty_replies,
+            'admin_replies': admin_replies
+        })
+
+    conn.close()
+    return render_template(
+        'my_doubts.html',
+        doubts_with_replies=doubts_with_replies
     )
 
 
@@ -892,6 +1270,130 @@ def upload_material():
         return redirect(url_for('upload_material'))
 
     return render_template('upload_material.html')
+
+
+# --------------------------------
+# FACULTY VIEW ALL STUDENT DOUBTS
+# --------------------------------
+
+@app.route('/faculty/doubts')
+def faculty_doubts():
+    if 'faculty_id' not in session:
+        flash("Please login as faculty first.")
+        return redirect(url_for('faculty_login'))
+
+    conn = get_db_connection()
+    doubts = conn.execute("""
+        SELECT student_doubts.*,
+               students.full_name AS student_name,
+               students.student_id AS student_code
+        FROM student_doubts
+        JOIN students
+            ON student_doubts.student_id = students.id
+        ORDER BY student_doubts.created_at DESC
+    """).fetchall()
+
+    doubts_with_replies = []
+    for doubt in doubts:
+        faculty_replies = conn.execute("""
+            SELECT doubt_replies.answer,
+                   doubt_replies.created_at,
+                   faculty.full_name AS responder_name
+            FROM doubt_replies
+            JOIN faculty
+                ON doubt_replies.faculty_id = faculty.id
+            WHERE doubt_replies.doubt_id = ?
+            ORDER BY doubt_replies.created_at ASC
+        """, (doubt['id'],)).fetchall()
+        admin_replies = conn.execute("""
+            SELECT admin_doubt_replies.answer,
+                   admin_doubt_replies.created_at,
+                   admins.username AS responder_name
+            FROM admin_doubt_replies
+            JOIN admins
+                ON admin_doubt_replies.admin_id = admins.id
+            WHERE admin_doubt_replies.doubt_id = ?
+            ORDER BY admin_doubt_replies.created_at ASC
+        """, (doubt['id'],)).fetchall()
+        doubts_with_replies.append({
+            'doubt': doubt,
+            'faculty_replies': faculty_replies,
+            'admin_replies': admin_replies
+        })
+
+    conn.close()
+    return render_template(
+        'faculty_doubts.html',
+        doubts_with_replies=doubts_with_replies
+    )
+
+
+@app.route('/faculty/doubts/reply/<int:doubt_id>', methods=['POST'])
+def faculty_reply_doubt(doubt_id):
+    if 'faculty_id' not in session:
+        flash("Please login as faculty first.")
+        return redirect(url_for('faculty_login'))
+
+    answer = request.form.get('answer', '').strip()
+    if not answer:
+        flash("Please enter your answer.")
+        return redirect(url_for('faculty_doubts'))
+
+    conn = get_db_connection()
+    doubt = conn.execute(
+        "SELECT id FROM student_doubts WHERE id = ?",
+        (doubt_id,)
+    ).fetchone()
+    if doubt is None:
+        conn.close()
+        flash("Doubt not found.")
+        return redirect(url_for('faculty_doubts'))
+
+    conn.execute("""
+        INSERT INTO doubt_replies
+        (doubt_id, faculty_id, answer)
+        VALUES (?, ?, ?)
+    """, (
+        doubt_id,
+        session['faculty_id'],
+        answer
+    ))
+    conn.execute("""
+        UPDATE student_doubts
+        SET status = 'Answered'
+        WHERE id = ?
+    """, (doubt_id,))
+    conn.commit()
+    conn.close()
+    flash("Your reply has been submitted successfully!")
+    return redirect(url_for('faculty_doubts'))
+
+
+@app.route('/faculty/doubts/resolve/<int:doubt_id>', methods=['POST'])
+def faculty_resolve_doubt(doubt_id):
+    if 'faculty_id' not in session:
+        flash("Please login as faculty first.")
+        return redirect(url_for('faculty_login'))
+
+    conn = get_db_connection()
+    doubt = conn.execute(
+        "SELECT id FROM student_doubts WHERE id = ?",
+        (doubt_id,)
+    ).fetchone()
+    if doubt is None:
+        conn.close()
+        flash("Doubt not found.")
+        return redirect(url_for('faculty_doubts'))
+
+    conn.execute("""
+        UPDATE student_doubts
+        SET status = 'Resolved'
+        WHERE id = ?
+    """, (doubt_id,))
+    conn.commit()
+    conn.close()
+    flash("Doubt marked as resolved successfully!")
+    return redirect(url_for('faculty_doubts'))
 
 
 # --------------------------------

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask a Doubt - CampusConnect</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="faculty-add-container">
+
+        <h2>Ask a Doubt</h2>
+        <p>Submit your academic questions to faculty members.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('ask_doubt') }}">
+
+            <label for="subject">Subject</label>
+            <input
+                type="text"
+                id="subject"
+                name="subject"
+                placeholder="Enter subject name"
+                required
+            >
+
+            <label for="title">Doubt Title</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                placeholder="Enter your doubt title"
+                required
+            >
+
+            <label for="description">Describe Your Doubt</label>
+            <textarea
+                id="description"
+                name="description"
+                rows="6"
+                placeholder="Explain your question clearly..."
+                required
+            ></textarea>
+
+            <button type="submit">Submit Doubt</button>
+
+        </form>
+
+        <br>
+
+        <a href="{{ url_for('student_dashboard') }}">Back to Dashboard</a>
+
+    </div>
+
+</body>
+</html>

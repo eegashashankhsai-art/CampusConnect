@@ -727,3 +727,267 @@ nav a:hover {
     margin-top: 18px;
     line-height: 1.8;
 }
+
+/* Faculty Management Page */
+
+.faculty-management-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 25px;
+    background: white;
+}
+
+.faculty-management-table th,
+.faculty-management-table td {
+    padding: 16px 20px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.faculty-management-table th {
+    background-color: #263b5e;
+    color: white;
+}
+
+.faculty-management-table tr:nth-child(even) {
+    background-color: #f5f7fa;
+}
+
+.faculty-management-table tr:hover {
+    background-color: #eaf1fa;
+}
+
+.faculty-management-table a {
+    margin-right: 10px;
+}
+
+/* Edit Faculty Page - Complete Layout Fix */
+
+.faculty-edit-container {
+    display: block;
+    width: 90%;
+    max-width: 550px;
+    margin: 50px auto;
+    padding: 35px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.faculty-edit-container h1 {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.faculty-edit-container p {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.faculty-edit-container form {
+    display: block;
+    width: 100%;
+}
+
+.faculty-edit-container label {
+    display: block;
+    margin: 18px 0 8px;
+    font-weight: bold;
+}
+
+.faculty-edit-container input {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.faculty-edit-container button {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: #263b5e;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.faculty-edit-container button:hover {
+    background-color: #172b4d;
+}
+
+.faculty-edit-container > a {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+}
+
+/* Add Faculty Page */
+
+.faculty-add-container {
+    display: block;
+    width: 90%;
+    max-width: 550px;
+    margin: 50px auto;
+    padding: 35px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+}
+
+.faculty-add-container h1 {
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.faculty-add-container > p {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.faculty-add-container form {
+    display: block;
+    width: 100%;
+}
+
+.faculty-add-container label {
+    display: block;
+    margin: 18px 0 8px;
+    font-weight: bold;
+}
+
+.faculty-add-container input {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.faculty-add-container button {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: #263b5e;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.faculty-add-container button:hover {
+    background-color: #172b4d;
+}
+
+.faculty-add-container > a {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.add-faculty-btn {
+    display: inline-block;
+    padding: 12px 22px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    background-color: #263b5e;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.add-faculty-btn:hover {
+    background-color: #172b4d;
+}
+
+/* My Doubts Page */
+
+.doubt-card {
+    background: #ffffff;
+    padding: 25px;
+    margin: 25px 0;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    text-align: left;
+}
+
+.doubt-card h3 {
+    margin-bottom: 18px;
+    color: #263b80;
+    font-size: 22px;
+}
+
+.doubt-card p {
+    margin: 12px 0;
+    line-height: 1.7;
+    color: #444;
+}
+
+.doubt-card hr {
+    margin: 25px 0;
+    border: none;
+    border-top: 1px solid #e5e5e5;
+}
+
+.doubt-card h4 {
+    margin-bottom: 18px;
+    color: #263b80;
+}
+
+.doubt-reply {
+    background: #f3f6ff;
+    padding: 18px;
+    margin-top: 15px;
+    border-left: 4px solid #263b80;
+    border-radius: 8px;
+}
+
+.doubt-reply p {
+    margin: 8px 0;
+}
+
+.doubt-reply small {
+    display: block;
+    margin-top: 12px;
+    color: #777;
+}
+
+.doubt-card + br {
+    display: none;
+}
+
+/* =====================================
+   CAMPUSCONNECT - MODERN TEAL THEME
+===================================== */
+
+:root {
+    --primary: #123047;
+    --secondary: #087e8b;
+    --secondary-dark: #06636d;
+    --background: #f0f7f8;
+    --card: #ffffff;
+    --text: #263746;
+    --border: #d5e4e7;
+    --light-teal: #e5f3f3;
+}
+
+/* Main Page */
+
+body {
+    background: var(--background);
+    color: var(--text);
+}

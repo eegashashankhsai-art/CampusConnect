@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Doubts - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="faculty-add-container">
+
+        <h2>My Doubts</h2>
+        <p>Track your submitted questions and replies from faculty and admin.</p>
+
+        {% if doubts_with_replies %}
+
+            {% for item in doubts_with_replies %}
+                {% set doubt = item.doubt %}
+
+                <div class="doubt-card">
+
+                    <h3>{{ doubt.title }}</h3>
+
+                    <p><strong>Subject:</strong> {{ doubt.subject }}</p>
+
+                    <p><strong>Description:</strong></p>
+                    <p>{{ doubt.description }}</p>
+
+                    <p>
+                        <strong>Status:</strong>
+                        {{ doubt.status }}
+                    </p>
+
+                    <hr>
+
+                    <h4>Faculty Replies</h4>
+
+                    {% if item.faculty_replies %}
+
+                        {% for reply in item.faculty_replies %}
+
+                            <div class="doubt-reply">
+
+                                <p>
+                                    <strong>
+                                        {{ reply.responder_name }}
+                                    </strong>
+                                </p>
+
+                                <p>{{ reply.answer }}</p>
+
+                                <small>{{ reply.created_at }}</small>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p>No faculty replies yet.</p>
+
+                    {% endif %}
+
+                    <h4>Admin Replies</h4>
+
+                    {% if item.admin_replies %}
+
+                        {% for reply in item.admin_replies %}
+
+                            <div class="doubt-reply">
+
+                                <p>
+                                    <strong>
+                                        {{ reply.responder_name }}
+                                    </strong>
+                                </p>
+
+                                <p>{{ reply.answer }}</p>
+
+                                <small>{{ reply.created_at }}</small>
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% else %}
+
+                        <p>No admin replies yet.</p>
+
+                    {% endif %}
+
+                </div>
+
+                <br>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>You have not submitted any doubts yet.</p>
+
+        {% endif %}
+
+        <br>
+
+        <a href="{{ url_for('ask_doubt') }}">Ask Another Doubt</a>
+
+        <br><br>
+
+        <a href="{{ url_for('student_dashboard') }}">
+            Back to Dashboard
+        </a>
+
+    </div>
+
+</body>
+</html>

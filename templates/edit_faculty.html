@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Edit Faculty - CampusConnect</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <h2>CampusConnect</h2>
+
+        <a href="{{ url_for('manage_faculty') }}">
+            Manage Faculty
+        </a>
+
+        <a href="{{ url_for('admin_logout') }}">
+            Logout
+        </a>
+    </nav>
+
+    <div class="faculty-edit-container">
+
+        <h1>Edit Faculty Details</h1>
+
+        <p>Update faculty information below.</p>
+
+        {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+
+            <label>Faculty Name</label>
+
+            <input type="text"
+                   name="full_name"
+                   value="{{ faculty['full_name'] }}"
+                   required>
+
+            <label>Email Address</label>
+
+            <input type="email"
+                   name="email"
+                   value="{{ faculty['email'] }}"
+                   required>
+
+            <label>Department</label>
+
+            <input type="text"
+                   name="department"
+                   value="{{ faculty['department'] }}"
+                   required>
+
+            <br><br>
+
+            <button type="submit">
+                Update Faculty
+            </button>
+
+        </form>
+
+        <br>
+
+        <a href="{{ url_for('manage_faculty') }}">
+            Cancel and Go Back
+        </a>
+
+    </div>
+
+</body>
+</html>
