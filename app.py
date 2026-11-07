@@ -29,6 +29,39 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Create database tables
 create_tables()
 
+# --------------------------------
+# INITIAL ADMIN ACCOUNT SETUP
+# --------------------------------
+def create_initial_admin():
+    username = os.environ.get("CAMPUSCONNECT_ADMIN_USERNAME")
+    password = os.environ.get("CAMPUSCONNECT_ADMIN_PASSWORD")
+    if not username or not password:
+        return
+    if len(password) < 8:
+        print("Admin setup skipped: password must be at least 8 characters.")
+        return
+    conn = sqlite3.connect("database/college.db")
+    try:
+        existing_admin = conn.execute(
+            "SELECT id FROM admins WHERE username = ?",
+            (username,)
+        ).fetchone()
+        if existing_admin is None:
+            hashed_password = generate_password_hash(password)
+            conn.execute("""
+                INSERT INTO admins (username, password)
+                VALUES (?, ?)
+            """, (username, hashed_password))
+            conn.commit()
+            print("Initial admin account created successfully!")
+        else:
+            print("Initial admin account already exists.")
+    finally:
+        conn.close()
+
+
+create_initial_admin()
+
 
 # --------------------------------
 # CHECK ALLOWED FILE TYPE
