@@ -11,8 +11,8 @@
 
     <nav>
         <h2>CampusConnect</h2>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/logout">Logout</a>
+        <a href="{{ url_for('faculty_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('faculty_logout') }}">Logout</a>
     </nav>
 
     <div class="login-container">
@@ -87,7 +87,7 @@
 
             <br>
 
-            <a href="/dashboard">Back to Dashboard</a>
+            <a href="{{ url_for('faculty_dashboard') }}">Back to Dashboard</a>
 
         </div>
     </div>
